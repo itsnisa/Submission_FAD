@@ -9,6 +9,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import plotly.io as pio
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -20,37 +21,76 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Custom CSS ────────────────────────────────────────────────────────────────
+# Night-market ledger theme
 st.markdown("""
 <style>
+    :root {
+        --ink: #e8f1ed;
+        --muted: #8ba5a1;
+        --canvas: #081a20;
+        --panel: #102b31;
+        --panel-soft: #14363b;
+        --line: #235057;
+        --aqua: #49d3c6;
+        --lime: #d7f36b;
+        --orange: #ff9b5e;
+    }
+    .stApp { background: var(--canvas); color: var(--ink); }
+    [data-testid="stSidebar"] { background: #0d252b; border-right: 1px solid var(--line); }
+    [data-testid="stSidebar"] * { color: var(--ink); }
     .main-header {
-        font-size: 2.2rem; font-weight: 700;
-        background: linear-gradient(90deg, #264653, #2A9D8F);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        margin-bottom: 0.3rem;
+        font-family: Georgia, serif; font-size: 2.7rem; line-height: 1.05;
+        color: var(--ink); margin: 0.5rem 0 0.2rem;
+        letter-spacing: -0.04em;
     }
-    .sub-header {font-size: 1rem; color: #6c757d; margin-bottom: 1.5rem;}
-    .metric-card {
-        background: white; border-radius: 12px;
-        padding: 1rem 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border-left: 4px solid #2A9D8F;
-    }
+    .sub-header { color: var(--muted); font-size: 0.92rem; margin-bottom: 1.8rem; }
     .section-header {
-        font-size: 1.3rem; font-weight: 600; color: #264653;
-        border-bottom: 2px solid #2A9D8F; padding-bottom: 6px;
-        margin: 1.5rem 0 1rem 0;
+        color: var(--aqua); font-size: 1.12rem; font-weight: 650;
+        border-bottom: 1px solid var(--line); padding-bottom: 0.55rem;
+        margin: 1.7rem 0 0.9rem; letter-spacing: 0.01em;
     }
+    [data-testid="stMetric"] {
+        background: var(--panel); border: 1px solid var(--line);
+        border-top: 3px solid var(--lime); padding: 0.9rem 1rem;
+        min-height: 112px;
+    }
+    [data-testid="stMetricLabel"] { color: var(--muted); }
+    [data-testid="stMetricValue"] { color: var(--ink); font-size: 1.65rem; }
     .insight-box {
-        background: #f0f9f8; border-left: 4px solid #2A9D8F;
-        padding: 0.8rem 1rem; border-radius: 0 8px 8px 0;
-        margin: 0.5rem 0 1rem 0; font-size: 0.9rem;
+        background: var(--panel); border-left: 3px solid var(--lime);
+        color: var(--ink); padding: 0.9rem 1rem; margin: 0.8rem 0 1.2rem;
+        font-size: 0.91rem; line-height: 1.55;
     }
+    [data-testid="stDataFrame"] { border: 1px solid var(--line); }
+    .stButton > button, [data-baseweb="select"] > div {
+        background: var(--panel); border-color: var(--line); color: var(--ink);
+    }
+    hr { border-color: var(--line); }
 </style>
 """, unsafe_allow_html=True)
 
-PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948']
-GRAY = '#b8bcc2'
-YEAR_COLORS = {2016: PALETTE[0], 2017: PALETTE[1], 2018: PALETTE[2]}
+PALETTE = ['#49d3c6', '#d7f36b', '#ff9b5e', '#7aa7ff', '#e88cba', '#8bd3a8', '#b8a7ff', '#ef6f6c']
+GRAY = '#557378'
+YEAR_COLORS = {2016: PALETTE[3], 2017: PALETTE[2], 2018: PALETTE[0]}
+PLOT_BG = '#102b31'
+PAPER_BG = '#081a20'
+GRID = '#235057'
+TEXT = '#e8f1ed'
+MUTED = '#8ba5a1'
+
+def apply_plot_theme(fig):
+    fig.update_layout(
+        plot_bgcolor=PLOT_BG,
+        paper_bgcolor=PAPER_BG,
+        font=dict(family='Arial, sans-serif', color=TEXT),
+        title_font=dict(family='Georgia, serif', color=TEXT, size=17),
+        margin=dict(l=52, r=24, t=58, b=48),
+        hoverlabel=dict(bgcolor='#183e43', font_color=TEXT),
+        legend=dict(bgcolor='rgba(0,0,0,0)', font_color=TEXT),
+    )
+    fig.update_xaxes(gridcolor=GRID, zerolinecolor=GRID, linecolor=GRID, tickfont_color=MUTED)
+    fig.update_yaxes(gridcolor=GRID, zerolinecolor=GRID, linecolor=GRID, tickfont_color=MUTED)
+    return fig
 
 # ── Data loading ──────────────────────────────────────────────────────────────
 @st.cache_data(show_spinner="Loading datasets...")
@@ -184,13 +224,12 @@ cat_perf    = data['cat_perf']
 state_stats = data['state_stats']
 rfm         = data['rfm']
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SIDEBAR
-# ─────────────────────────────────────────────────────────────────────────────
+# ── SIDEBAR
 with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Olist_logo.svg/320px-Olist_logo.svg.png", width=180)
+    st.markdown("<div style='font-family:Georgia,serif;font-size:1.8rem;color:#d7f36b;letter-spacing:-.04em'>Olist / ledger</div>", unsafe_allow_html=True)
+    st.caption("Brazilian commerce, read clearly")
     st.markdown("---")
-    st.markdown("## 📂 Navigation")
+    st.markdown("### Explore")
     page = st.radio("", [
         "🏠 Overview",
         "📈 Revenue Trend",
@@ -200,14 +239,13 @@ with st.sidebar:
     ])
 
     st.markdown("---")
-    st.markdown("### 🗓️ Date Filter")
+    st.markdown("### Time window")
     min_yr = int(monthly_rev['year'].min())
     max_yr = int(monthly_rev['year'].max())
-    year_range = st.slider("Year Range", min_yr, max_yr, (min_yr, max_yr))
+    year_range = st.slider("Year range", min_yr, max_yr, (min_yr, max_yr))
 
-    st.markdown("---")
-    st.markdown("### 📊 Top N Categories")
-    top_n = st.slider("Show top N categories", 5, 30, 15)
+    st.markdown("### Category focus")
+    top_n = st.slider("Categories to show", 5, 30, 15)
 
 # Filter monthly by year
 mr_filt = monthly_rev[monthly_rev['year'].between(year_range[0], year_range[1])]
@@ -215,8 +253,8 @@ mr_filt = monthly_rev[monthly_rev['year'].between(year_range[0], year_range[1])]
 # ─────────────────────────────────────────────────────────────────────────────
 # HEADER
 # ─────────────────────────────────────────────────────────────────────────────
-st.markdown('<div class="main-header">🛒 Olist E-Commerce Analytics</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Brazilian E-Commerce Public Dataset • 2016–2018 • Interactive Analysis Dashboard</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-header">Olist, in motion</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">A field guide to Brazilian e-commerce performance · 2016–2018 · delivered orders</div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE: OVERVIEW
@@ -248,8 +286,9 @@ if page == "🏠 Overview":
         marker_color=PALETTE[2], name='Orders',
         hovertemplate='%{x|%b %Y}<br>%{y:,} orders<extra></extra>'
     ), row=2, col=1)
-    fig.update_layout(height=500, showlegend=False, plot_bgcolor='#F8F9FA',
-                      paper_bgcolor='white', margin=dict(t=40))
+    fig.update_layout(height=500, showlegend=False, plot_bgcolor=PLOT_BG,
+                      paper_bgcolor=PAPER_BG, margin=dict(t=40))
+    apply_plot_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
 
     col1, col2 = st.columns(2)
@@ -259,8 +298,9 @@ if page == "🏠 Overview":
         fig2 = px.bar(top_states, x='customer_state', y='total_orders',
                       labels={'customer_state':'State','total_orders':'Orders'})
         fig2.update_traces(marker_color=PALETTE[0], marker_line_width=0)
-        fig2.update_layout(showlegend=False, plot_bgcolor='#F8F9FA',
-                           paper_bgcolor='white', height=350, margin=dict(t=10))
+        fig2.update_layout(showlegend=False, plot_bgcolor=PLOT_BG,
+                           paper_bgcolor=PAPER_BG, height=350, margin=dict(t=10))
+        apply_plot_theme(fig2)
         st.plotly_chart(fig2, use_container_width=True)
 
     with col2:
@@ -271,8 +311,10 @@ if page == "🏠 Overview":
                       labels={'payment_type':'Payment Type','revenue':'Revenue (R$)'})
         fig3.update_traces(marker_color=PALETTE[0], marker_line_width=0,
                            hovertemplate='%{y}<br>R$ %{x:,.0f}<extra></extra>')
-        fig3.update_layout(yaxis={'categoryorder':'array','categoryarray':pay_display['payment_type'].tolist()})
-        fig3.update_layout(height=350, margin=dict(t=10))
+        fig3.update_layout(yaxis={'categoryorder':'array','categoryarray':pay_display['payment_type'].tolist()},
+                           height=350, margin=dict(t=10))
+        apply_plot_theme(fig3)
+        apply_plot_theme(fig3)
         st.plotly_chart(fig3, use_container_width=True)
 
     st.markdown('<div class="insight-box">💡 <b>Key Insight:</b> Revenue menunjukkan tren pertumbuhan positif dengan puncak pada November 2017 (Black Friday). São Paulo mendominasi volume order dengan lebih dari 40% transaksi.</div>', unsafe_allow_html=True)
@@ -304,9 +346,10 @@ elif page == "📈 Revenue Trend":
     fig.update_layout(
         title='Monthly Revenue with 3-Month Rolling Average',
         xaxis_title='Month', yaxis_title='Revenue (R$)',
-        height=420, plot_bgcolor='#F8F9FA', paper_bgcolor='white',
+        height=420,
         hovermode='x unified', legend=dict(yanchor='top', y=0.99)
     )
+    apply_plot_theme(fig)
     st.plotly_chart(fig, use_container_width=True)
 
     col1, col2 = st.columns(2)
@@ -324,8 +367,9 @@ elif page == "📈 Revenue Trend":
                 marker_line_width=0
             ))
         fig4.update_layout(barmode='group', height=380,
-                           plot_bgcolor='#F8F9FA', paper_bgcolor='white',
                            yaxis_title='Revenue (R$)', margin=dict(t=10))
+        apply_plot_theme(fig4)
+        apply_plot_theme(fig4)
         st.plotly_chart(fig4, use_container_width=True)
 
     with col2:
@@ -339,8 +383,9 @@ elif page == "📈 Revenue Trend":
             hovertemplate='%{x|%b %Y}<br>%{y:.1f}%<extra></extra>'
         ))
         fig5.add_hline(y=0, line_color='black', line_width=1)
-        fig5.update_layout(height=380, yaxis_title='MoM Growth (%)',
-                           plot_bgcolor='#F8F9FA', paper_bgcolor='white', margin=dict(t=10))
+        fig5.update_layout(height=380, yaxis_title='MoM Growth (%)', margin=dict(t=10))
+        apply_plot_theme(fig5)
+        apply_plot_theme(fig5)
         st.plotly_chart(fig5, use_container_width=True)
 
     peak_row = mr_filt2.loc[mr_filt2['revenue'].idxmax()]
@@ -370,9 +415,10 @@ elif page == "📦 Product Categories":
                      labels={'total_revenue':'Revenue (R$)','category_en':'Category'},
                      title=f'Top {top_n} Categories by Revenue')
         fig.update_traces(marker_color=PALETTE[0], marker_line_width=0)
-        fig.update_layout(height=500, plot_bgcolor='#F8F9FA', paper_bgcolor='white',
+        fig.update_layout(height=500, plot_bgcolor=PLOT_BG, paper_bgcolor=PAPER_BG,
                           showlegend=False, margin=dict(t=40))
-        st.plotly_chart(fig, use_container_width=True)
+        apply_plot_theme(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         fig2 = px.bar(top_cat.sort_values('units_sold'),
@@ -381,8 +427,9 @@ elif page == "📦 Product Categories":
                       labels={'units_sold':'Units Sold','category_en':'Category'},
                       title=f'Top {top_n} Categories by Units Sold')
         fig2.update_traces(marker_color=PALETTE[0], marker_line_width=0)
-        fig2.update_layout(height=500, plot_bgcolor='#F8F9FA', paper_bgcolor='white',
+        fig2.update_layout(height=500, plot_bgcolor=PLOT_BG, paper_bgcolor=PAPER_BG,
                            showlegend=False, margin=dict(t=40))
+        apply_plot_theme(fig2)
         st.plotly_chart(fig2, use_container_width=True)
 
     st.markdown('<div class="section-header">Revenue vs Review Score Bubble Chart</div>', unsafe_allow_html=True)
@@ -397,7 +444,7 @@ elif page == "📦 Product Categories":
                       title='Revenue vs Review Score (bubble size = units sold)')
     fig3.add_vline(x=top_cat['avg_review'].mean(), line_dash='dash',
                    line_color='#6b7280', annotation_text='Mean Review')
-    fig3.update_layout(height=420, plot_bgcolor='#F8F9FA', paper_bgcolor='white')
+    fig3.update_layout(height=420, plot_bgcolor=PLOT_BG, paper_bgcolor=PAPER_BG)
     st.plotly_chart(fig3, use_container_width=True)
 
     st.markdown('<div class="section-header">Category Detail Table</div>', unsafe_allow_html=True)
@@ -424,8 +471,9 @@ elif page == "🌍 Geographic Analysis":
                      labels={'customer_state':'State','total_orders':'Orders'})
         fig.update_traces(marker_color=PALETTE[0], marker_line_width=0)
         fig.update_layout(showlegend=False, height=400,
-                          plot_bgcolor='#F8F9FA', paper_bgcolor='white')
-        st.plotly_chart(fig, use_container_width=True)
+                          plot_bgcolor=PLOT_BG, paper_bgcolor=PAPER_BG)
+        apply_plot_theme(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         top_rev_st = state_stats.nlargest(15, 'revenue')
@@ -434,7 +482,8 @@ elif page == "🌍 Geographic Analysis":
                       labels={'customer_state':'State','revenue':'Revenue (R$)'})
         fig2.update_traces(marker_color=PALETTE[0], marker_line_width=0)
         fig2.update_layout(showlegend=False, height=400,
-                           plot_bgcolor='#F8F9FA', paper_bgcolor='white')
+                           plot_bgcolor=PLOT_BG, paper_bgcolor=PAPER_BG)
+        apply_plot_theme(fig2)
         st.plotly_chart(fig2, use_container_width=True)
 
     st.markdown('<div class="section-header">Revenue per Customer by State</div>', unsafe_allow_html=True)
@@ -448,7 +497,7 @@ elif page == "🌍 Geographic Analysis":
                               'revenue':'Revenue (R$)',
                               'rev_per_customer':'Rev/Customer'})
     fig3.update_traces(textposition='top center', textfont_size=9)
-    fig3.update_layout(height=480, plot_bgcolor='#F8F9FA', paper_bgcolor='white')
+    fig3.update_layout(height=480, plot_bgcolor=PLOT_BG, paper_bgcolor=PAPER_BG)
     st.plotly_chart(fig3, use_container_width=True)
 
     st.markdown('<div class="section-header">State Summary Table</div>', unsafe_allow_html=True)
@@ -499,8 +548,9 @@ elif page == "👥 RFM Segmentation":
                      title='Customer Distribution by RFM Segment',
                      labels={'count':'Customers','Segment':'Segment'})
         fig.update_traces(marker_color=PALETTE[0], marker_line_width=0)
-        fig.update_layout(height=400, paper_bgcolor='white')
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_layout(height=400, paper_bgcolor=PAPER_BG)
+        apply_plot_theme(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
     with col2:
         fig2 = px.bar(seg_summary.sort_values('total_revenue'),
@@ -509,7 +559,8 @@ elif page == "👥 RFM Segmentation":
                       labels={'total_revenue':'Revenue (R$)'})
         fig2.update_traces(marker_color=PALETTE[0], marker_line_width=0)
         fig2.update_layout(showlegend=False, height=400,
-                           plot_bgcolor='#F8F9FA', paper_bgcolor='white')
+                           plot_bgcolor=PLOT_BG, paper_bgcolor=PAPER_BG)
+        apply_plot_theme(fig2)
         st.plotly_chart(fig2, use_container_width=True)
 
     st.markdown('<div class="section-header">RFM Scatter: Recency vs Monetary</div>', unsafe_allow_html=True)
@@ -521,7 +572,7 @@ elif page == "👥 RFM Segmentation":
                       title='Customer Recency vs Monetary Value (size = frequency)',
                       labels={'recency':'Days Since Last Purchase','monetary':'Total Spend (R$)'})
     fig3.update_layout(legend=dict(title='RFM Segment'))
-    fig3.update_layout(height=480, plot_bgcolor='#F8F9FA', paper_bgcolor='white')
+    fig3.update_layout(height=480, plot_bgcolor=PLOT_BG, paper_bgcolor=PAPER_BG)
     st.plotly_chart(fig3, use_container_width=True)
 
     st.markdown('<div class="section-header">Spending Tier Clustering</div>', unsafe_allow_html=True)
@@ -535,14 +586,16 @@ elif page == "👥 RFM Segmentation":
                       title='Customers per Spending Tier',
                       labels={'spending_tier':'Tier','customers':'Customers'})
         fig4.update_traces(marker_color=PALETTE[0], marker_line_width=0)
-        fig4.update_layout(showlegend=False, plot_bgcolor='#F8F9FA', paper_bgcolor='white', height=350)
+        fig4.update_layout(showlegend=False, plot_bgcolor=PLOT_BG, paper_bgcolor=PAPER_BG, height=350)
+        apply_plot_theme(fig4)
         st.plotly_chart(fig4, use_container_width=True)
     with col2:
         fig5 = px.bar(tier_df, x='spending_tier', y='avg_monetary',
                       title='Average Spend per Tier',
                       labels={'spending_tier':'Tier','avg_monetary':'Avg Spend (R$)'})
         fig5.update_traces(marker_color=PALETTE[0], marker_line_width=0)
-        fig5.update_layout(showlegend=False, plot_bgcolor='#F8F9FA', paper_bgcolor='white', height=350)
+        fig5.update_layout(showlegend=False, plot_bgcolor=PLOT_BG, paper_bgcolor=PAPER_BG, height=350)
+        apply_plot_theme(fig5)
         st.plotly_chart(fig5, use_container_width=True)
 
     st.markdown('<div class="section-header">Segment Summary Table</div>', unsafe_allow_html=True)
