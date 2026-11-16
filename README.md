@@ -8,7 +8,7 @@ Dashboard interaktif dan analisis data lengkap menggunakan dataset **E-Commerce 
 
 ### 1. Clone / Download Proyek
 
-Pastikan seluruh file di atas sudah tersedia di direktori lokal Anda.
+Pastikan seluruh file proyek dan folder dataset `E-Commerce Public Dataset/` tersedia di direktori lokal Anda. Nama folder dataset harus mempertahankan kapitalisasi tersebut karena deployment Linux membedakan huruf besar dan kecil.
 
 ### 2. Buat Virtual Environment (Direkomendasikan)
 
@@ -32,7 +32,6 @@ pip install -r requirements.txt
 ### 4. Jalankan Dashboard Streamlit
 
 ```bash
-cd dashboard
 streamlit run dashboard.py
 ```
 
@@ -41,7 +40,7 @@ Dashboard akan terbuka otomatis di browser pada alamat **http://localhost:8501**
 ### 5. Jalankan Notebook Analisis (Opsional)
 
 ```bash
-jupyter notebook olist_analysis.ipynb
+jupyter notebook notebook.ipynb
 ```
 
 ---
@@ -75,19 +74,21 @@ Dashboard terdiri dari **5 halaman** yang dapat diakses melalui sidebar:
 ## 🔬 Teknik Analisis yang Diterapkan
 
 - **RFM Analysis** — Segmentasi pelanggan berdasarkan Recency, Frequency, Monetary
-- **Geospatial Analysis** — Peta interaktif distribusi pelanggan & seller (Folium)
+- **Geospatial Analysis** — Analisis lokasi pelanggan menggunakan agregasi koordinat geolocation; dashboard menyediakan ringkasan geografis berbasis state.
 - **Clustering (Manual Binning)** — Pengelompokan spending tier & recency tier menggunakan `pd.cut`
 
 ---
 
 ## 🌐 Deploy ke Streamlit Cloud
 
-1. Push seluruh isi folder `dashboard/` ke repositori GitHub
-2. Buka [share.streamlit.io](https://share.streamlit.io) dan login
-3. Klik **New app** → pilih repositori dan set **Main file path** ke `dashboard.py`
-4. Klik **Deploy** — aplikasi akan live dalam beberapa menit
+1. Push seluruh isi proyek ke repositori GitHub, termasuk folder `E-Commerce Public Dataset/` dan file `requirements.txt`.
+2. Buka [share.streamlit.io](https://share.streamlit.io) dan login.
+3. Klik **New app**, pilih repositori dan branch yang digunakan.
+4. Isi **Main file path** dengan `dashboard.py`.
+5. Klik **Deploy**.
 
-> **Catatan:** Pastikan semua file `.csv` ikut ter-push ke repositori agar dashboard dapat membaca data.
+> **Penting:** Jangan mengubah kapitalisasi folder `E-Commerce Public Dataset/`. Dashboard menggunakan path tersebut dan Linux membedakan huruf besar-kecil.
+> **Catatan:** Pastikan seluruh file `.csv` di dalam folder dataset ikut di-push agar dashboard dapat membaca data.
 
 ---
 
